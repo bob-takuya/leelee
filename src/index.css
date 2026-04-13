@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  font-family:
+    'Inter',
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #2a3447;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #394761;
+}
+
+.btn {
+  @apply px-3 py-1.5 rounded-md text-xs font-medium transition-colors
+    border border-line bg-panel2 hover:bg-line disabled:opacity-50
+    disabled:cursor-not-allowed;
+}
+.btn-primary {
+  @apply bg-accent/20 border-accent/50 text-accent hover:bg-accent/30;
+}
+.btn-danger {
+  @apply bg-red-500/20 border-red-500/50 text-red-300 hover:bg-red-500/30;
+}
+.chip {
+  @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px]
+    font-mono bg-panel2 border border-line;
+}
+.field {
+  @apply w-full bg-panel border border-line rounded px-2 py-1 text-xs
+    font-mono focus:outline-none focus:border-accent/60;
+}
+.label {
+  @apply text-[10px] uppercase tracking-wider text-slate-400;
+}
+.section {
+  @apply border-b border-line px-3 py-3;
+}
+.section-title {
+  @apply text-[11px] font-semibold uppercase tracking-wider text-slate-300
+    mb-2 flex items-center gap-2;
+}
