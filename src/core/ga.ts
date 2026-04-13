@@ -74,9 +74,36 @@ function evaluate(
     touched.add(m.nodeB);
   }
   let unconnectedPenalty = 0;
-  for (const n of nodes) if (!touched.has(n.id)) unconnectedPenalty += 200;
+  for (const n of nodes) if (!touched.has(n.id)) unconnectedPenalty += 500;
+
+  // Each strut endpoint must be triangulated by at least 3 cables,
+  // otherwise the strut is effectively a pendulum (floating) — the GA
+  // will otherwise happily retain "dangling" struts.
+  const cablesAtNode = new Map<string, number>();
+  for (const c of activeCables) {
+    cablesAtNode.set(c.nodeA, (cablesAtNode.get(c.nodeA) ?? 0) + 1);
+    cablesAtNode.set(c.nodeB, (cablesAtNode.get(c.nodeB) ?? 0) + 1);
+  }
+  let danglingStrutEnds = 0;
+  for (const s of activeStruts) {
+    if ((cablesAtNode.get(s.nodeA) ?? 0) < 3) danglingStrutEnds++;
+    if ((cablesAtNode.get(s.nodeB) ?? 0) < 3) danglingStrutEnds++;
+  }
+  unconnectedPenalty += danglingStrutEnds * 100;
 
   const { w, feasible, nullspaceDim } = findSelfStress(nodes, active);
+
+  // Detect any active member that carried near-zero force density in the
+  // self-stress — this includes "inactive" struts that remained in the
+  // topology without actually participating in equilibrium.
+  let zeroForceMembers = 0;
+  if (feasible) {
+    const zeroTol = 5e-3;
+    for (let i = 0; i < active.length; i++) {
+      if (Math.abs(w[i] ?? 0) < zeroTol) zeroForceMembers++;
+    }
+  }
+  unconnectedPenalty += zeroForceMembers * 80;
 
   let discontinuityScore = 0;
   if (input.enforceClass1) {

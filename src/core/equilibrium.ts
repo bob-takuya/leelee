@@ -82,44 +82,45 @@ export function findSelfStress(
 
   const signs = members.map((m) => m.sign);
 
-  // Try each basis vector first (and its negation)
+  // A feasible self-stress must satisfy BOTH:
+  //   - correct sign on every member (struts compressive, cables tensile)
+  //   - strictly non-zero force density on every STRUT, otherwise the strut
+  //     is "floating" and the remaining sub-structure is the actual
+  //     tensegrity. Cables may legitimately be slack (q = 0) in over-
+  //     determined configurations.
+  const strutMinMag = 1e-3;
+  const cableTol = 1e-6;
   const tryVector = (v: number[]): number[] | null => {
-    const tol = 1e-6;
-    let ok = true;
-    for (let i = 0; i < v.length; i++) {
-      if (signs[i] === 1 && v[i] < -tol) {
-        ok = false;
-        break;
-      }
-      if (signs[i] === -1 && v[i] > tol) {
-        ok = false;
-        break;
-      }
-      if (Math.abs(v[i]) < tol && false) {
-        // allow zeros
+    // Normalize so the largest absolute component is 1, which makes the
+    // strut-magnitude threshold meaningful regardless of basis scale.
+    const m = Math.max(...v.map((x) => Math.abs(x)));
+    if (m < 1e-12) return null;
+    const vn = v.map((x) => x / m);
+    for (let i = 0; i < vn.length; i++) {
+      if (signs[i] === 1) {
+        if (vn[i] < -cableTol) return null;
+      } else {
+        // strut: must be negative AND have meaningful magnitude
+        if (vn[i] > -strutMinMag) return null;
       }
     }
-    if (ok) return v;
-    return null;
+    return vn;
   };
 
   for (const basis of ns) {
-    const pos = basis.slice();
-    const neg = basis.map((x) => -x);
-    const t1 = tryVector(pos);
-    if (t1) return { w: normalize(t1), feasible: true, nullspaceDim: dim };
-    const t2 = tryVector(neg);
-    if (t2) return { w: normalize(t2), feasible: true, nullspaceDim: dim };
+    const t1 = tryVector(basis);
+    if (t1) return { w: t1, feasible: true, nullspaceDim: dim };
+    const t2 = tryVector(basis.map((x) => -x));
+    if (t2) return { w: t2, feasible: true, nullspaceDim: dim };
   }
 
   if (dim > 1) {
     // Random combinations in the null space looking for a feasible one.
-    for (let tries = 0; tries < 200; tries++) {
+    for (let tries = 0; tries < 300; tries++) {
       const coeffs = ns.map(() => Math.random() * 2 - 1);
       const combo = combineBasis(ns, coeffs);
-      let feas = tryVector(combo);
-      if (!feas) feas = tryVector(combo.map((x) => -x));
-      if (feas) return { w: normalize(feas), feasible: true, nullspaceDim: dim };
+      const feas = tryVector(combo) ?? tryVector(combo.map((x) => -x));
+      if (feas) return { w: feas, feasible: true, nullspaceDim: dim };
     }
   }
 
